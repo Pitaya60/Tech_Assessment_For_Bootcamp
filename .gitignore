@@ -1,0 +1,7 @@
+cat > .gitignore << 'EOF'
+node_modules/
+.env
+backend/db/weather.db
+backend/db/weather.db-shm
+backend/db/weather.db-wal
+EOF

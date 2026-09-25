@@ -70,36 +70,103 @@ router.get("/geocode", async (req, res) => {
 // GET /api/videos?location=... -> "Stand apart" API integration #1.
 // Uses the YouTube Data API if YOUTUBE_API_KEY is configured; otherwise
 // degrades gracefully instead of erroring the whole app.
+// GET /api/videos?location=... -> "Stand apart" API integration #1.
+// Uses the YouTube Data API if YOUTUBE_API_KEY is configured (most
+// reliable). If no key is set, falls back to a keyless scrape of YouTube's
+// public search results page so the feature still works out of the box.
 router.get("/videos", async (req, res) => {
   const { location } = req.query;
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  if (!apiKey) {
-    return res.json({
-      enabled: false,
-      message: "YouTube integration is optional and disabled (no YOUTUBE_API_KEY set).",
-      videos: [],
-    });
+  if (!location || !String(location).trim()) {
+    return res.json({ enabled: true, videos: [] });
   }
+
+  const apiKey = process.env.YOUTUBE_API_KEY;
+
+  if (apiKey) {
+    try {
+      const videos = await fetchVideosViaApi(location, apiKey);
+      return res.json({ enabled: true, videos });
+    } catch (err) {
+      // Fall through to the keyless method instead of failing outright.
+    }
+  }
+
   try {
-    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=6&type=video&q=${encodeURIComponent(
-      `${location} travel guide`
-    )}&key=${apiKey}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`YouTube API returned ${response.status}`);
-    const data = await response.json();
-    const videos = (data.items || []).map((item) => ({
-      title: item.snippet.title,
-      channel: item.snippet.channelTitle,
-      videoId: item.id.videoId,
-      thumbnail: item.snippet.thumbnails?.medium?.url,
-      url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
-    }));
-    res.json({ enabled: true, videos });
+    const videos = await fetchVideosViaScrape(location);
+    return res.json({ enabled: true, videos });
   } catch (err) {
     res.status(502).json({ enabled: true, error: "Failed to fetch videos.", videos: [] });
   }
 });
 
+async function fetchVideosViaApi(location, apiKey) {
+  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=6&type=video&q=${encodeURIComponent(
+    `${location} travel guide`
+  )}&key=${apiKey}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`YouTube API returned ${response.status}`);
+  const data = await response.json();
+  return (data.items || []).map((item) => ({
+    title: item.snippet.title,
+    channel: item.snippet.channelTitle,
+    videoId: item.id.videoId,
+    thumbnail: item.snippet.thumbnails?.medium?.url,
+    url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+  }));
+}
+
+async function fetchVideosViaScrape(location) {
+  const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(
+    `${location} travel guide`
+  )}`;
+  const response = await fetch(searchUrl, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+      "Accept-Language": "en-US,en;q=0.9",
+    },
+  });
+  if (!response.ok) throw new Error(`YouTube search page returned ${response.status}`);
+  const html = await response.text();
+
+  const marker = "var ytInitialData = ";
+  const start = html.indexOf(marker);
+  if (start === -1) throw new Error("Could not locate ytInitialData on the page.");
+  const jsonStart = start + marker.length;
+  const jsonEnd = html.indexOf(";</script>", jsonStart);
+  const jsonText = html.slice(jsonStart, jsonEnd === -1 ? undefined : jsonEnd);
+
+  let data;
+  try {
+    data = JSON.parse(jsonText);
+  } catch (e) {
+    throw new Error("Could not parse YouTube search results.");
+  }
+
+  const contents =
+    data?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
+
+  const videos = [];
+  for (const section of contents) {
+    const items = section?.itemSectionRenderer?.contents || [];
+    for (const item of items) {
+      const v = item?.videoRenderer;
+      if (!v || !v.videoId) continue;
+      videos.push({
+        title: v.title?.runs?.[0]?.text || "Untitled",
+        channel: v.ownerText?.runs?.[0]?.text || "",
+        videoId: v.videoId,
+        thumbnail: v.thumbnail?.thumbnails?.slice(-1)?.[0]?.url,
+        url: `https://www.youtube.com/watch?v=${v.videoId}`,
+      });
+      if (videos.length >= 6) break;
+    }
+    if (videos.length >= 6) break;
+  }
+
+  if (videos.length === 0) throw new Error("No videos parsed from search results.");
+  return videos;
+}
 // GET /api/map?location=... -> "Stand apart" API integration #2.
 // Returns coordinates + a keyless OpenStreetMap embed URL, plus a Google
 // Maps link (Google's embed requires a billing-enabled API key, so we link
