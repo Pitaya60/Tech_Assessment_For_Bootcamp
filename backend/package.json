@@ -1,0 +1,20 @@
+{
+  "name": "weather-app-backend",
+  "version": "1.0.0",
+  "description": "Backend API for the PM Accelerator Weather App technical assessment (CRUD + weather + export)",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "json2csv": "^6.0.0-alpha.2",
+    "node-fetch": "^2.7.0",
+    "pdfkit": "^0.15.0",
+    "xmlbuilder2": "^3.1.1"
+  }
+}
