@@ -18,8 +18,6 @@ export default function Header() {
             <p className="tagline">Live conditions, 5-day outlook, and saved trip records</p>
           </div>
         </div>
-        {/* TODO: replace with your actual name before submitting */}
-        <p className="candidate-name">Built by [Your Name Here] — AI Engineer Intern Technical Assessment</p>
       </div>
     </header>
   );

@@ -68,9 +68,6 @@ router.get("/geocode", async (req, res) => {
 });
 
 // GET /api/videos?location=... -> "Stand apart" API integration #1.
-// Uses the YouTube Data API if YOUTUBE_API_KEY is configured; otherwise
-// degrades gracefully instead of erroring the whole app.
-// GET /api/videos?location=... -> "Stand apart" API integration #1.
 // Uses the YouTube Data API if YOUTUBE_API_KEY is configured (most
 // reliable). If no key is set, falls back to a keyless scrape of YouTube's
 // public search results page so the feature still works out of the box.
@@ -99,6 +96,7 @@ router.get("/videos", async (req, res) => {
   }
 });
 
+// Official, key-based lookup (most accurate, subject to Google's quota).
 async function fetchVideosViaApi(location, apiKey) {
   const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=6&type=video&q=${encodeURIComponent(
     `${location} travel guide`
@@ -115,6 +113,10 @@ async function fetchVideosViaApi(location, apiKey) {
   }));
 }
 
+// Keyless fallback: YouTube's public search-results page embeds its results
+// as a JSON blob (`ytInitialData`) inside the HTML. We fetch that page like
+// a normal browser would and pull the video info out of it, so "Related
+// Videos" works even without ever creating a Google Cloud project/API key.
 async function fetchVideosViaScrape(location) {
   const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(
     `${location} travel guide`
@@ -167,6 +169,7 @@ async function fetchVideosViaScrape(location) {
   if (videos.length === 0) throw new Error("No videos parsed from search results.");
   return videos;
 }
+
 // GET /api/map?location=... -> "Stand apart" API integration #2.
 // Returns coordinates + a keyless OpenStreetMap embed URL, plus a Google
 // Maps link (Google's embed requires a billing-enabled API key, so we link

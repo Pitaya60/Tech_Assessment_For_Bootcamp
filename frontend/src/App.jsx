@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Header from "./components/Header.jsx";
-import Footer from "./components/Footer.jsx";
 import LocationInput from "./components/LocationInput.jsx";
 import ErrorBanner from "./components/ErrorBanner.jsx";
 import CurrentWeather from "./components/CurrentWeather.jsx";
@@ -67,8 +66,6 @@ export default function App() {
 
         <RecordsManager />
       </main>
-
-      <Footer />
     </div>
   );
 }
