@@ -59,6 +59,14 @@ main {
   font-size: 0.95rem;
 }
 
+.candidate-name {
+  margin: 0;
+  color: #9fb4dd;
+  font-size: 0.82rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
 /* ============ Cards ============ */
 .card {
   position: relative;
@@ -579,6 +587,31 @@ button.secondary:hover:not(:disabled) {
 
 .link-btn.danger {
   color: var(--danger);
+}
+
+/* ============ Footer ============ */
+.app-footer {
+  margin-top: 1rem;
+  padding: 1.75rem;
+  background: linear-gradient(135deg, var(--navy-950), var(--navy-800));
+  color: #dce6f5;
+  border-radius: var(--radius-lg);
+}
+
+.app-footer h3 {
+  margin-top: 0;
+  color: white;
+}
+
+.app-footer p {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #c3d3ef;
+}
+
+.app-footer a {
+  color: #9ecbff;
+  font-weight: 600;
 }
 
 /* ============ Responsive breakpoints ============ */
